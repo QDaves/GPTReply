@@ -1,0 +1,25 @@
+html, body, #app {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    background-color: #1a1a1a;
+    margin: 0;
+    padding: 0;
+  }
+  
+  html::-webkit-scrollbar, 
+  body::-webkit-scrollbar,
+  #app::-webkit-scrollbar {
+    display: none;
+  }
+  
+  body, #app {
+    overflow-y: auto;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+
+  html, body, #app {
+    height: 100%;
+  }
