@@ -59,6 +59,7 @@ type Position struct{ X, Y int }
 type ChatLogEntry struct {
 	Time              time.Time
 	Username, Message string
+	ChatType          string
 }
 
 type Settings struct {
@@ -184,14 +185,14 @@ func (a *App) husers(e *g.Intercept) {
 	}
 }
 
-func (a *App) chatmessages(e *g.Intercept, _ string) {
+func (a *App) chatmessages(e *g.Intercept, chatType string) {
 	index := e.Packet.ReadInt()
 	msg := e.Packet.ReadString()
 	username := a.getUsername(index)
 	if username == "" {
 		username = "Unknown"
 	}
-	a.addchatlog(username, msg)
+	a.addchatlog(username, msg, chatType)
 	if a.ignorereply(username, msg) {
 		go a.rply2message(username, msg)
 	}
@@ -227,13 +228,15 @@ func (a *App) containsBlacklistedWord(msg string) bool {
 	return false
 }
 
-func (a *App) addchatlog(username, message string) {
+func (a *App) addchatlog(username, message, chatType string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if len(a.chatLog) >= 100 {
 		a.chatLog = a.chatLog[1:]
 	}
-	a.chatLog = append(a.chatLog, ChatLogEntry{Time: time.Now(), Username: username, Message: message})
+	entry := ChatLogEntry{Time: time.Now(), Username: username, Message: message, ChatType: chatType}
+	a.chatLog = append(a.chatLog, entry)
+	runtime.EventsEmit(a.ctx, "logUpdate", entry)
 }
 
 func (a *App) rply2message(username, message string) {
