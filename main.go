@@ -97,6 +97,13 @@ func NewApp(ext *g.Ext, assets embed.FS) *App {
 		},
 	}
 }
+
+func (a *App) debugm(msg string) {
+	if os.Getenv("DEBUG") == "true" {
+		log.Println(msg)
+	}
+}
+
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.users = make(map[int]*User)
@@ -173,20 +180,17 @@ func (a *App) husers(e *g.Intercept) {
 			a.mu.Lock()
 			a.users[user.Index] = &user
 			a.mu.Unlock()
-			joinMsg := fmt.Sprintf("[JOIN] %s (Index ID: %d) joined the room", user.Name, user.Index)
-			log.Println(joinMsg)
 		}
 	}
 }
 
-func (a *App) chatmessages(e *g.Intercept, msgType string) {
+func (a *App) chatmessages(e *g.Intercept, _ string) {
 	index := e.Packet.ReadInt()
 	msg := e.Packet.ReadString()
 	username := a.getUsername(index)
 	if username == "" {
 		username = "Unknown"
 	}
-	a.logEvent(fmt.Sprintf("[%s] %s: %s", msgType, username, msg))
 	a.addchatlog(username, msg)
 	if a.ignorereply(username, msg) {
 		go a.rply2message(username, msg)
@@ -249,14 +253,12 @@ func (a *App) rply2message(username, message string) {
 		response, err = a.getAPIResponse(username, message, false)
 	}
 	if err != nil {
-		a.logEvent(fmt.Sprintf("Error %v", err))
 		return
 	}
 	if response == "" {
 		a.logEvent("empty response API")
 		return
 	}
-	a.logEvent(fmt.Sprintf("Response: %s", response))
 	for _, chunk := range a.splitIntoChunks(a.cleanResponse(response), 95) {
 		a.ext.Send(out.SHOUT, chunk)
 		time.Sleep(500 * time.Millisecond)
@@ -396,7 +398,7 @@ func (a *App) removeuser(e *g.Intercept) {
 	username := a.getUsername(index)
 	if username != "" {
 		leaveMsg := fmt.Sprintf("[LEFT] %s (ID: %d) left the room", username, index)
-		log.Println(leaveMsg)
+		a.debugm(leaveMsg)
 		a.mu.Lock()
 		delete(a.users, index)
 		a.mu.Unlock()
@@ -427,7 +429,7 @@ func (a *App) updateR() {
 }
 
 func (a *App) logEvent(msg string) {
-	log.Println(msg)
+	a.debugm(msg)
 	if !strings.Contains(msg, "[JOIN]") && !strings.Contains(msg, "[LEFT]") {
 		runtime.EventsEmit(a.ctx, "logUpdate", msg)
 	}
@@ -499,6 +501,7 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
 func (a *App) ToggleExtension() bool {
 	isExtensionEnabled = !isExtensionEnabled
 	return isExtensionEnabled
