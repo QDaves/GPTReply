@@ -108,7 +108,6 @@ func (a *App) startup(ctx context.Context) {
 func (a *App) loadsttngs() {
 	exePath, err := os.Executable()
 	if err != nil {
-		log.Printf("%v", err)
 		return
 	}
 	settingsPath := filepath.Join(filepath.Dir(exePath), "settings.json")
@@ -116,18 +115,13 @@ func (a *App) loadsttngs() {
 	data, err := ioutil.ReadFile(settingsPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("using default")
 			if err := a.SaveSettings(a.settings); err != nil {
-				log.Printf("%v", err)
 			}
-		} else {
-			log.Printf("%v", err)
 		}
 		return
 	}
 
 	if err := json.Unmarshal(data, &a.settings); err != nil {
-		log.Printf("%v", err)
 		return
 	}
 }
@@ -190,7 +184,6 @@ func (a *App) chatmessages(e *g.Intercept, msgType string) {
 	msg := e.Packet.ReadString()
 	username := a.getUsername(index)
 	if username == "" {
-		log.Printf("Unknown user: UserID=%d", index)
 		username = "Unknown"
 	}
 	a.logEvent(fmt.Sprintf("[%s] %s: %s", msgType, username, msg))
@@ -397,7 +390,6 @@ func (a *App) removeuser(e *g.Intercept) {
 	s := e.Packet.ReadString()
 	index, err := strconv.Atoi(s)
 	if err != nil {
-		log.Printf("rrror parsing user: %v", err)
 		return
 	}
 
@@ -408,8 +400,6 @@ func (a *App) removeuser(e *g.Intercept) {
 		a.mu.Lock()
 		delete(a.users, index)
 		a.mu.Unlock()
-	} else {
-		log.Printf("Unknown user with index %d left the room", index)
 	}
 }
 
@@ -446,7 +436,6 @@ func (a *App) logEvent(msg string) {
 func (a *App) GetSettings() Settings {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	log.Printf("returning: %+v", a.settings)
 	return a.settings
 }
 
@@ -524,20 +513,15 @@ func (a *App) ShowWindow() {
 }
 func setupExt() {
 	ext.Initialized(func(e g.InitArgs) {
-		log.Printf("initialized (connected=%t)", e.Connected)
 	})
 
 	ext.Activated(func() {
-		log.Printf("activated")
 		app.ShowWindow()
 	})
 
 	ext.Connected(func(e g.ConnectArgs) {
-		log.Printf("connected (%s:%d)", e.Host, e.Port)
-		log.Printf("client %s (%s)", e.Client.Identifier, e.Client.Version)
 	})
 
 	ext.Disconnected(func() {
-		log.Printf("connection lost")
 	})
 }
